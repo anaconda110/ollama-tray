@@ -1,0 +1,72 @@
+/* ─── 全局重置 ─── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+
+body {
+  background: transparent;
+  font-family: 'PingFang SC', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color: #2a1f1f;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  padding: 10px;
+}
+
+/* ─── 卡片容器（撑满窗口，杜绝裁剪/透明留白）─── */
+.quota-card {
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 28px 30px 22px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 0 2px 12px rgba(0, 0, 0, 0.04);
+  animation: fadeInUp 0.28s ease-out;
+  height: calc(100vh - 20px);
+  display: flex;
+  flex-direction: column;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.card-head { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
+.hero-pct { flex-shrink: 0; }
+.bar-row { flex-shrink: 0; }
+
+.brand { display: flex; gap: 14px; align-items: center; }
+.logo { width: 48px; height: 48px; flex: 0 0 48px; border-radius: 12px; object-fit: cover; -webkit-user-drag: none; }
+.titles h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; color: #2a1f1f; line-height: 1.2; }
+.subtitle { margin-top: 4px; color: #8a7e7e; font-size: 13px; font-weight: 400; line-height: 1.3; }
+
+.status { padding: 5px 13px; border-radius: 999px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: #e8f5e9; color: #2e8b3d; white-space: nowrap; transition: all 0.3s ease; }
+.status.warn { background: #fff3e0; color: #e65100; }
+.status.error { background: #fce4ec; color: #c62828; }
+.status .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.18); }
+.status.warn .dot { box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.18); }
+.status.error .dot { box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.18); }
+
+/* ─── 主百分比 ─── */
+.hero-pct { display: flex; align-items: baseline; gap: 3px; margin-bottom: 26px; }
+.big-num { font-size: 72px; font-weight: 800; line-height: 1; letter-spacing: -3px; color: #2a1f1f; transition: transform 0.3s ease; }
+.big-num.bump { transform: scale(1.08); }
+.big-unit { font-size: 28px; font-weight: 700; color: #2a1f1f; margin-left: 1px; }
+.hero-label { margin-left: 12px; color: #8a7e7e; font-size: 14px; font-weight: 400; align-self: flex-end; padding-bottom: 6px; }
+
+/* ─── 进度条 ─── */
+.bar-row { margin-bottom: 18px; }
+.bar-row:last-of-type { margin-bottom: 0; }
+.bar-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.bar-label { font-size: 14px; font-weight: 600; color: #2a1f1f; }
+.bar-pct { font-size: 14px; font-weight: 600; color: #8a7e7e; }
+.bar-pct.warn { color: #ff9f1c; }
+.bar-track { position: relative; height: 10px; border-radius: 999px; background: #f0eae8; overflow: hidden; }
+.bar-fill { position: relative; height: 100%; border-radius: 999px; transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.bar-track--pink .bar-fill { background: linear-gradient(90deg, #ff5e8a 0%, #ff8fb1 100%); }
+.bar-track--orange .bar-fill { background: linear-gradient(90deg, #ff9f1c 0%, #ffb84d 100%); }
+.bar-fill::after { content: ''; position: absolute; right: -2px; top: 50%; transform: translateY(-50%); width: 6px; height: 6px; border-radius: 50%; background: inherit; filter: brightness(1.1); opacity: 0; transition: opacity 0.3s; }
+.bar-fill[style*="width: 0%"]::after { opacity: 0; }
+.bar-track--orange .bar-fill::after { opacity: 1; }
+/* 重置倒计时文字（右对齐，让两行 d h m 数字对齐）*/
+.bar-reset { margin-top: 7px; color: #8a7e7e; font-size: 13px; font-weight: 400; text-align: right; }
+.bar-reset span { color: #2a1f1f; font-weight: 600; }
+
+/* ─── 底部 ─── */
+.card-foot { margin-top: auto; text-align: center; flex-shrink: 0; }
+.updated { color: #b8b0b0; font-size: 12px; font-weight: 400; }

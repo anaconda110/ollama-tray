@@ -1,0 +1,17 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'PingFang SC', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: #fff;
+  color: #2a1f1f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+.about-card { text-align: center; padding: 20px; }
+.logo { width: 72px; height: 72px; border-radius: 18px; object-fit: cover; margin-bottom: 14px; }
+h1 { font-size: 22px; font-weight: 700; }
+.ver { color: #ff5e8a; font-weight: 600; margin-top: 4px; }
+.desc { color: #8a7e7e; font-size: 13px; margin-top: 12px; max-width: 280px; line-height: 1.6; }
+.foot { color: #c0b6b8; font-size: 12px; margin-top: 16px; }

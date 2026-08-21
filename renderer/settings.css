@@ -1,0 +1,53 @@
+/* ─── 设置窗口样式 ─── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'PingFang SC', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: #fdeef0;
+  color: #2a1f1f;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.settings-card {
+  min-height: 100vh;
+  background: #fff;
+  padding: 28px 30px;
+  display: flex;
+  flex-direction: column;
+}
+header { display: flex; gap: 14px; align-items: center; margin-bottom: 24px; }
+.logo { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; }
+.titles h1 { font-size: 20px; font-weight: 700; }
+.subtitle { margin-top: 4px; color: #8a7e7e; font-size: 13px; }
+
+.form { flex: 1; }
+.form label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+input[type="password"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e0d8d6;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input[type="password"]:focus { border-color: #ff5e8a; box-shadow: 0 0 0 3px rgba(255, 94, 138, 0.12); }
+.hint { margin-top: 10px; font-size: 12px; color: #8a7e7e; line-height: 1.5; }
+
+.btn { display: inline-block; padding: 10px 16px; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+.btn--primary { background: #ff5e8a; color: #fff; }
+.btn--secondary { background: #f6edf0; color: #2a1f1f; width: 100%; margin-top: 16px; }
+.btn--ghost { background: transparent; color: #8a7e7e; }
+.btn:hover { opacity: 0.85; }
+.actions { display: flex; gap: 12px; margin-top: 20px; }
+.actions .btn--primary { flex: 1; }
+.actions .btn--ghost { flex: 1; }
+.status-msg { margin-top: 16px; font-size: 13px; color: #1faa59; min-height: 18px; }
+.status-msg.error { color: #c62828; }
+
+footer { margin-top: 20px; text-align: center; }
+.lang-switch { display: inline-flex; align-items: center; gap: 6px; }
+.lang-btn { background: none; border: none; color: #8a7e7e; font-size: 13px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.lang-btn.active { background: #fdeef0; color: #ff5e8a; font-weight: 600; }
+.lang-sep { color: #ddd; }

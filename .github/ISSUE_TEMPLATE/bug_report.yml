@@ -1,0 +1,48 @@
+name: Bug report
+description: 提交一个可复现的缺陷
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **注意**：若涉及 API Key / 隐私数据，请勿公开提交，改用私密安全报告（见 SECURITY.md）。
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 操作系统
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开托盘
+        2. 点击...
+        3. 看到...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 可附截图 / 日志
+    validations:
+      required: true

@@ -1,0 +1,113 @@
+{
+  "name": "ollama-tray",
+  "version": "1.0.0",
+  "description": "Open-source cross-platform system tray monitor for Ollama Cloud usage quota",
+  "main": "main.js",
+  "type": "commonjs",
+  "license": "MIT",
+  "author": {
+    "name": "Tom",
+    "email": "tom@example.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/you/ollama-tray.git"
+  },
+  "bugs": {
+    "url": "https://github.com/you/ollama-tray/issues"
+  },
+  "homepage": "https://github.com/you/ollama-tray#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "main.js",
+    "preload.js",
+    "lib/**/*",
+    "renderer/**/*",
+    "assets/**/*"
+  ],
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps",
+    "test": "node test/quota.test.js"
+  },
+  "keywords": [
+    "ollama",
+    "quota",
+    "usage",
+    "monitor",
+    "tray",
+    "electron",
+    "open-source"
+  ],
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "build": {
+    "appId": "com.you.ollama-tray",
+    "productName": "Ollama Tray",
+    "copyright": "Copyright © 2026 Ollama Tray Contributors",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "renderer/**/*",
+      "assets/**/*"
+    ],
+    "mac": {
+      "icon": "assets/tray-icon.png",
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "icon": "assets/tray-icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "assets/tray-icon.png",
+      "category": "Utility",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

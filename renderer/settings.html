@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="settings-card">
+    <header>
+      <img class="logo" src="../assets/ollama-icon.png" alt="Ollama">
+      <div class="titles">
+        <h1 data-i18n="settingsTitle">设置 API Key</h1>
+        <p class="subtitle" data-i18n="settingsSubtitle">用于安全获取 Ollama Cloud 账号的用量配额</p>
+      </div>
+    </header>
+
+    <section class="form">
+      <label for="keyInput" data-i18n="keyLabel">粘贴 Ollama Cloud API Key</label>
+      <input id="keyInput" type="password" placeholder="sk-..." spellcheck="false" autocomplete="off">
+
+      <div class="hint" data-i18n="keyHint">
+        Key 仅保存在本机安全存储中（Electron safeStorage 加密），不会上传。未设置时会自动读取本机 Maka 凭据库中的 Ollama Cloud key。
+      </div>
+
+      <button id="openSiteBtn" class="btn btn--secondary" data-i18n="openSite">打开 API Keys 页面</button>
+
+      <div class="actions">
+        <button id="saveBtn" class="btn btn--primary" data-i18n="save">保存并刷新</button>
+        <button id="clearBtn" class="btn btn--ghost" data-i18n="clear">清除</button>
+      </div>
+
+      <div id="statusMsg" class="status-msg"></div>
+    </section>
+
+    <footer>
+      <span class="lang-switch">
+        <button id="langZh" class="lang-btn">中文</button>
+        <span class="lang-sep">/</span>
+        <button id="langEn" class="lang-btn">English</button>
+      </span>
+    </footer>
+  </div>
+  <script src="settings.js"></script>
+</body>
+</html>

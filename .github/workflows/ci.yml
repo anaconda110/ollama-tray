@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Syntax check
+        run: |
+          node --check main.js
+          node --check preload.js
+          node --check lib/quota.js
+          node --check renderer/popup.js
+          node --check renderer/settings.js
+      - name: Run unit tests
+        run: npm test
+
+  build:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build (electron-builder)
+        run: npm run build:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ollama-tray-win
+          path: dist/
