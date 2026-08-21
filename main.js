@@ -51,11 +51,22 @@ let refreshTimer = null;
 const OLLAMA_KEYS_URL = 'https://ollama.com/settings/keys';
 
 // ─── 固定锚点（滚动窗口 5h / 7d）────────────────────────
-// 5h 会话：整点滚动窗口（重置点均为整点，旧锚点 + 5h 保持整点）
-// 周额度：每周一 00:00 UTC（北京 08:00）固定重置
-const SESSION_ANCHOR_MS = 5 * 60 * 60 * 1000;
-let lastSessionPct = null;
+// 5h 会话：整点滚动窗口，每 5h 一个重置点（网格步长 5h，相位 UTC 16:00）。
+//   倒计时 = 距下一个网格整点，恒 <= 5h（不再漂移到未来）。
+// 周额度：每周一 00:00 UTC（北京 08:00）固定重置。
+const FIVE_H = 5 * 60 * 60 * 1000;
+const PHASE_UTC_HOUR = 16; // 用户实测锚点 8/22 16:00 UTC 的相位
 let lastWeeklyPct = null;
+
+/** 下一个 5h 整点网格重置时刻（5h 步长，相位 PHASE_UTC_HOUR）。倒计时恒 <= 5h。 */
+function nextFiveHGridReset(nowMs = Date.now()) {
+  const d = new Date(nowMs);
+  const dayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  let ref = dayStart + PHASE_UTC_HOUR * 3600000; // 当天相位整点
+  while (ref > nowMs) ref -= FIVE_H; // 回退到 now 之前最近的网格点
+  while (ref <= nowMs) ref += FIVE_H; // 推进到 now 之后最近的网格点
+  return ref;
+}
 
 function nextMondayUtcReset(nowMs = Date.now()) {
   const d = new Date(nowMs);
@@ -69,27 +80,18 @@ function nextMondayUtcReset(nowMs = Date.now()) {
 
 function applyFixedResetAnchor(quota) {
   const now = Date.now();
-  const sPct = quota.five_hour.used_pct;
   const wPct = quota.weekly.used_pct;
 
-  let sAnchor = store.get('sessionAnchorMs');
+  // 5h：确定性整点网格，倒计时恒 <= 5h
+  const sAnchor = nextFiveHGridReset(now);
+
+  // 周额度：固定周一 00:00 UTC（窗口重置由 usage 突降检测触发重锚）
   let wAnchor = store.get('weeklyAnchorMs');
-
-  const sessionReset = lastSessionPct !== null && sPct < lastSessionPct * 0.5;
   const weeklyReset = lastWeeklyPct !== null && wPct < lastWeeklyPct * 0.5;
-
-  if (!sAnchor || sessionReset) {
-    // 5h 滚动窗口：重置点保持整点网格（旧锚点 + 5h），不用 now+5h 漂移分钟
-    sAnchor = (sAnchor || now) + SESSION_ANCHOR_MS;
-    while (sAnchor <= now) sAnchor += SESSION_ANCHOR_MS;
-    store.set('sessionAnchorMs', sAnchor);
-  }
   if (!wAnchor || weeklyReset) {
     wAnchor = nextMondayUtcReset();
     store.set('weeklyAnchorMs', wAnchor);
   }
-
-  lastSessionPct = sPct;
   lastWeeklyPct = wPct;
 
   quota.five_hour.reset_at = new Date(sAnchor).toISOString();
