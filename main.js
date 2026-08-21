@@ -195,7 +195,6 @@ function updateTrayIcon(quota, errCode) {
 
 function createTray() {
   tray = new Tray(loadTrayIcon('idle'));
-  tray.setToolTip(t('tooltip'));
 
   const contextMenu = Menu.buildFromTemplate([
     { label: t('refresh'), click: () => refreshQuota() },
@@ -326,8 +325,6 @@ async function refreshQuota() {
     applyFixedResetAnchor(currentQuota);
     updateTrayIcon(currentQuota);
     appendHistory(currentQuota);
-    const tt = `${t('tooltip')}\n${t('label5h')}: ${currentQuota.five_hour.used_pct}%\n${t('labelWeekly')}: ${currentQuota.weekly.used_pct}%`;
-    tray.setToolTip(tt);
     if (popupWindow && isPopupVisible) {
       popupWindow.webContents.send('quota-update', currentQuota, getLang());
     }
@@ -335,9 +332,6 @@ async function refreshQuota() {
     console.error('刷新配额失败:', e);
     const code = e.message;
     updateTrayIcon(null, code);
-    if (code === 'NO_KEY') tray.setToolTip(t('statusIncomplete'));
-    else if (code === 'KEY_INVALID') tray.setToolTip(t('statusExpired'));
-    else tray.setToolTip(t('statusFailed'));
     if (popupWindow && isPopupVisible) {
       popupWindow.webContents.send('quota-error', code, getLang());
     }
