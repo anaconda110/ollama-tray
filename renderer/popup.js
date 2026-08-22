@@ -174,7 +174,8 @@ window.api.onQuotaRefreshing((lang) => {
     setLang(lang);
     const data = await window.api.refresh();
     if (data) render(data, lang);
+    else renderError('NO_KEY'); // 无 key 时明确提示，避免空白弹窗
   } catch (e) {
-    renderError('NO_KEY');
+    renderError('FAILED'); // 网络/其它错误，显示"获取失败"
   }
 })();

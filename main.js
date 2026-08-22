@@ -51,11 +51,12 @@ let refreshTimer = null;
 // 失败指数退避：断网 / 限流时避免狂刷（30s→1m→2m→4m→8m→10m 封顶）
 let failCount = 0;
 let nextRetryAt = 0;
+let isRefreshing = false;
 const OLLAMA_KEYS_URL = 'https://ollama.com/settings/keys';
 
 // ─── 固定锚点（滚动窗口 5h / 7d）────────────────────────
-// 5h 会话：整点滚动窗口，每 5h 一个重置点。用户实测重置点均为「北京时间」整点
-//（04/09/14/19/00/05/10/15/20/01...），因此用北京时区(+8)的整点网格。
+// 5h 会话：整点滚动窗口。实测验证：最近一次 Ollama 显示「北京14:13 → 重置15:00」，
+// 即下一个重置点为「北京整点网格」（每 5h 一个整点），故用北京时区(+8)网格。
 // 倒计时 = 距下一个北京整点网格点，恒 <= 5h。
 // 周额度：每周一 00:00 UTC（北京 08:00）固定重置。
 const FIVE_H = 5 * 60 * 60 * 1000;
@@ -68,8 +69,7 @@ function nextFiveHGridReset(nowMs = Date.now()) {
   const d = new Date(bj);
   const bjDayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); // 北京当天 00:00
   let ref = bjDayStart;
-  while (ref > bj) ref -= FIVE_H;
-  while (ref <= bj) ref += FIVE_H;
+  while (ref <= bj) ref += FIVE_H; // 推进到 now 之后最近的整点网格点
   return ref - BEIJING_OFFSET; // 转回真实 UTC
 }
 
@@ -77,8 +77,8 @@ function nextMondayUtcReset(nowMs = Date.now()) {
   const d = new Date(nowMs);
   const utcDay = d.getUTCDay(); // 0=Sun .. 1=Mon .. 6=Sat
   const daysToMon = (8 - utcDay) % 7;
-  const thisMonUtc = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-  let anchor = thisMonUtc + daysToMon * 86400000;
+  const todayUtcMidnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  let anchor = todayUtcMidnight + daysToMon * 86400000;
   if (anchor <= nowMs) anchor += 7 * 86400000;
   return anchor;
 }
@@ -90,10 +90,10 @@ function applyFixedResetAnchor(quota) {
   // 5h：确定性整点网格，倒计时恒 <= 5h
   const sAnchor = nextFiveHGridReset(now);
 
-  // 周额度：固定周一 00:00 UTC（窗口重置由 usage 突降检测触发重锚）
+  // 周额度：固定周一 00:00 UTC；窗口重置或锚点已过期时重新锚定
   let wAnchor = store.get('weeklyAnchorMs');
   const weeklyReset = lastWeeklyPct !== null && wPct < lastWeeklyPct * 0.5;
-  if (!wAnchor || weeklyReset) {
+  if (!wAnchor || wAnchor <= now || weeklyReset) {
     wAnchor = nextMondayUtcReset();
     store.set('weeklyAnchorMs', wAnchor);
   }
@@ -327,9 +327,11 @@ function openAbout() {
 
 // ─── 刷新配额 ──────────────────────────────────────────
 async function refreshQuota(force) {
+  if (isRefreshing) return; // 并发守卫：避免定时器 + 手动刷新同时抓取
   // 失败退避中：非强制(手动)刷新则跳过，防止断网/限流时狂刷
   if (!force && Date.now() < nextRetryAt) return;
 
+  isRefreshing = true;
   if (popupWindow && isPopupVisible) {
     popupWindow.webContents.send('quota-refreshing', getLang());
   }
@@ -356,6 +358,8 @@ async function refreshQuota(force) {
     if (popupWindow && isPopupVisible) {
       popupWindow.webContents.send('quota-error', code, getLang());
     }
+  } finally {
+    isRefreshing = false;
   }
 }
 
@@ -404,7 +408,7 @@ if (!gotLock) {
 }
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  // 托盘常驻应用：窗口关闭不退出（由托盘菜单「退出」结束进程）
 });
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createPopupWindow();

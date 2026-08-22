@@ -20,3 +20,5 @@
 *.gif binary
 *.7z binary
 *.exe binary
+
+package-lock.json -diff
