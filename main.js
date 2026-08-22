@@ -51,21 +51,23 @@ let refreshTimer = null;
 const OLLAMA_KEYS_URL = 'https://ollama.com/settings/keys';
 
 // ─── 固定锚点（滚动窗口 5h / 7d）────────────────────────
-// 5h 会话：整点滚动窗口，每 5h 一个重置点（网格步长 5h，相位 UTC 16:00）。
-//   倒计时 = 距下一个网格整点，恒 <= 5h（不再漂移到未来）。
+// 5h 会话：整点滚动窗口，每 5h 一个重置点。用户实测重置点均为「北京时间」整点
+//（04/09/14/19/00/05/10/15/20/01...），因此用北京时区(+8)的整点网格。
+// 倒计时 = 距下一个北京整点网格点，恒 <= 5h。
 // 周额度：每周一 00:00 UTC（北京 08:00）固定重置。
 const FIVE_H = 5 * 60 * 60 * 1000;
-const PHASE_UTC_HOUR = 16; // 用户实测锚点 8/22 16:00 UTC 的相位
+const BEIJING_OFFSET = 8 * 60 * 60 * 1000; // UTC+8
 let lastWeeklyPct = null;
 
-/** 下一个 5h 整点网格重置时刻（5h 步长，相位 PHASE_UTC_HOUR）。倒计时恒 <= 5h。 */
+/** 下一个 5h 重置点：基于北京时间整点网格（每 5h 一个整点）。倒计时恒 <= 5h。 */
 function nextFiveHGridReset(nowMs = Date.now()) {
-  const d = new Date(nowMs);
-  const dayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-  let ref = dayStart + PHASE_UTC_HOUR * 3600000; // 当天相位整点
-  while (ref > nowMs) ref -= FIVE_H; // 回退到 now 之前最近的网格点
-  while (ref <= nowMs) ref += FIVE_H; // 推进到 now 之后最近的网格点
-  return ref;
+  const bj = nowMs + BEIJING_OFFSET; // 北京时间
+  const d = new Date(bj);
+  const bjDayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); // 北京当天 00:00
+  let ref = bjDayStart;
+  while (ref > bj) ref -= FIVE_H;
+  while (ref <= bj) ref += FIVE_H;
+  return ref - BEIJING_OFFSET; // 转回真实 UTC
 }
 
 function nextMondayUtcReset(nowMs = Date.now()) {
