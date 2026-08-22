@@ -48,6 +48,9 @@ let hideTimer = null;
 let currentQuota = null;
 let lastFetchedAt = 0;
 let refreshTimer = null;
+// 失败指数退避：断网 / 限流时避免狂刷（30s→1m→2m→4m→8m→10m 封顶）
+let failCount = 0;
+let nextRetryAt = 0;
 const OLLAMA_KEYS_URL = 'https://ollama.com/settings/keys';
 
 // ─── 固定锚点（滚动窗口 5h / 7d）────────────────────────
@@ -102,6 +105,12 @@ function applyFixedResetAnchor(quota) {
 
 // ─── 配额历史日志（JSONL 追加）─────────────────────────
 const HISTORY_FILE = () => path.join(app.getPath('userData'), 'quota-history.jsonl');
+
+// 简单运行日志（userData/app.log）
+const LOG_FILE = () => path.join(app.getPath('userData'), 'app.log');
+function log(msg) {
+  try { fs.appendFileSync(LOG_FILE(), `[${new Date().toISOString()}] ${msg}\n`, 'utf8'); } catch {}
+}
 
 function appendHistory(quota) {
   try {
@@ -199,7 +208,7 @@ function createTray() {
   tray = new Tray(loadTrayIcon('idle'));
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: t('refresh'), click: () => refreshQuota() },
+    { label: t('refresh'), click: () => refreshQuota(true) },
     { type: 'separator' },
     { label: t('history'), click: () => openHistory() },
     { type: 'separator' },
@@ -317,13 +326,18 @@ function openAbout() {
 }
 
 // ─── 刷新配额 ──────────────────────────────────────────
-async function refreshQuota() {
+async function refreshQuota(force) {
+  // 失败退避中：非强制(手动)刷新则跳过，防止断网/限流时狂刷
+  if (!force && Date.now() < nextRetryAt) return;
+
   if (popupWindow && isPopupVisible) {
     popupWindow.webContents.send('quota-refreshing', getLang());
   }
   try {
     currentQuota = await fetchQuota();
     lastFetchedAt = Date.now();
+    failCount = 0;
+    nextRetryAt = 0;
     applyFixedResetAnchor(currentQuota);
     updateTrayIcon(currentQuota);
     appendHistory(currentQuota);
@@ -333,6 +347,11 @@ async function refreshQuota() {
   } catch (e) {
     console.error('刷新配额失败:', e);
     const code = e.message;
+    // 指数退避：30s 起，每次 ×2，封顶 10 分钟
+    failCount += 1;
+    const delay = Math.min(30_000 * Math.pow(2, failCount - 1), 600_000);
+    nextRetryAt = Date.now() + delay;
+    log(`refresh failed code=${code} retryIn=${(delay / 1000).toFixed(0)}s err=${String(e && e.message || e)}`);
     updateTrayIcon(null, code);
     if (popupWindow && isPopupVisible) {
       popupWindow.webContents.send('quota-error', code, getLang());
@@ -342,12 +361,12 @@ async function refreshQuota() {
 
 // ─── IPC ───────────────────────────────────────────────
 ipcMain.handle('quota:refresh', async () => {
-  await refreshQuota();
+  await refreshQuota(true); // 用户主动刷新：强制，跳过退避
   return currentQuota;
 });
 ipcMain.handle('settings:saveKey', async (_e, key) => {
   setSecureKey(String(key || '').trim());
-  await refreshQuota();
+  await refreshQuota(true);
   return { ok: true };
 });
 ipcMain.handle('settings:clearKey', async () => {
@@ -367,13 +386,22 @@ ipcMain.handle('settings:openKeysPage', async () => {
 ipcMain.handle('app:getLang', () => getLang());
 
 // ─── 生命周期 ──────────────────────────────────────────
-app.whenReady().then(() => {
-  createTray();
-  createPopupWindow();
-  refreshQuota();
-  const interval = Math.max(10, store.get('refreshInterval') || 60) * 1000;
-  refreshTimer = setInterval(refreshQuota, interval);
-});
+// 单实例锁：避免重复打开多个托盘图标
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (popupWindow && !popupWindow.isDestroyed()) popupWindow.show();
+  });
+  app.whenReady().then(() => {
+    createTray();
+    createPopupWindow();
+    refreshQuota();
+    const interval = Math.max(10, store.get('refreshInterval') || 60) * 1000;
+    refreshTimer = setInterval(refreshQuota, interval);
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
