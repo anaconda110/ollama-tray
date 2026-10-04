@@ -21,6 +21,7 @@
 - **失败指数退避**：断网/限流时 30s→10m，防狂刷；手动刷新可强制。
 - **运行日志**：写入 userData/app.log。
 - **彩色线稿羊驼图标**（官网）+ 正方形底座，UI/托盘不变形。
+- **NewAPI 数据源 + 成本明细页**：按模型 token × Ollama Usage Level 权重估算额度成本（可选，需自建 NewAPI 网关）。
 
 ### 变更
 - 数据源从 Cookie 抓取改为 Bearer API（api.ollama.com/api/usage）。
@@ -30,5 +31,5 @@
 ### 安全
 - API Key 仅本机 safeStorage 加密存储，不落盘明文、不上传。
 
-[Unreleased]: https://github.com/you/ollama-tray/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/you/ollama-tray/releases/tag/v1.0.0
+[Unreleased]: https://github.com/anaconda110/ollama-tray/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/anaconda110/ollama-tray/releases/tag/v1.0.0

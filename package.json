@@ -7,17 +7,17 @@
   "type": "commonjs",
   "license": "MIT",
   "author": {
-    "name": "Tom",
-    "email": "tom@example.com"
+    "name": "anaconda110",
+    "email": "anaconda1@qq.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/you/ollama-tray.git"
+    "url": "https://github.com/anaconda110/ollama-tray.git"
   },
   "bugs": {
-    "url": "https://github.com/you/ollama-tray/issues"
+    "url": "https://github.com/anaconda110/ollama-tray/issues"
   },
-  "homepage": "https://github.com/you/ollama-tray#readme",
+  "homepage": "https://github.com/anaconda110/ollama-tray#readme",
   "engines": {
     "node": ">=18"
   },

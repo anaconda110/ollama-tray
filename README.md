@@ -2,8 +2,8 @@
 
 一个**开源、轻量、跨平台**的桌面托盘小工具，用于实时监控 [Ollama Cloud](https://ollama.com) 账号的模型用量配额。
 
-![License](https://img.shields.io/github/license/you/ollama-tray)
-![CI](https://github.com/you/ollama-tray/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/github/license/anaconda110/ollama-tray)
+![CI](https://github.com/anaconda110/ollama-tray/actions/workflows/ci.yml/badge.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)
 ![Electron](https://img.shields.io/badge/electron-43.4-9feaf9)
 
