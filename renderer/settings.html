@@ -17,9 +17,7 @@
 
     <section class="form">
       <label for="keyInput" data-i18n="keyLabel">粘贴 Ollama Cloud API Key</label>
-      <input id="keyInput" type="password" placeholder="sk-..." spellcheck="false" autocomplete="off">
-
-      <div class="hint" data-i18n="keyHint">
+      <input id="keyInput" type="password" placeholder="sk-..." spellcheck="false" autocomplete="off">      <div class="hint" data-i18n="keyHint">
         Key 仅保存在本机安全存储中（Electron safeStorage 加密），不会上传。未设置时会自动读取本机 Maka 凭据库中的 Ollama Cloud key。
       </div>
 
@@ -31,6 +29,23 @@
       </div>
 
       <div id="statusMsg" class="status-msg"></div>
+    </section>
+
+    <section class="form" style="margin-top:16px; border-top:1px solid #f0eae8; padding-top:16px;">
+      <label data-i18n="newapiTitle" style="font-weight:600; display:block; margin-bottom:8px;">NewAPI 消耗明细（可选）</label>
+      <label for="newapiUrlInput" data-i18n="newapiUrl">NewAPI 地址</label>
+      <input id="newapiUrlInput" type="text" placeholder="http://192.168.6.229:3000" spellcheck="false" autocomplete="off">
+      <label for="newapiUserInput" data-i18n="newapiUser">管理员账号</label>
+      <input id="newapiUserInput" type="text" placeholder="root" spellcheck="false" autocomplete="off">
+      <label for="newapiPassInput" data-i18n="newapiPass">管理员密码</label>
+      <input id="newapiPassInput" type="password" placeholder="••••••••" spellcheck="false" autocomplete="off">
+      <div class="hint" data-i18n="newapiHint">
+        用于从 NewAPI 日志拉取按模型的实际 token/调用次数明细，进而按 Ollama Usage Level 权重估算额度成本。凭证仅存本机加密存储。NewAPI 价格不作参考。
+      </div>
+      <div class="actions">
+        <button id="newapiSaveBtn" class="btn btn--primary" data-i18n="newapiSave">保存 NewAPI 配置</button>
+        <button id="newapiClearBtn" class="btn btn--ghost" data-i18n="newapiClear">清除</button>
+      </div>
     </section>
 
     <footer>

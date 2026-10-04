@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="detail.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="logo" src="../assets/ollama-square.png" alt="">
+      <div class="titles">
+        <h1>消耗明细 · 成本</h1>
+        <p class="subtitle">按实际 token 消耗与 5h/周额度变化分摊</p>
+      </div>
+    </div>
+    <div class="actions">
+      <span class="status" id="statusBadge"><i class="dot"></i><span id="statusText">加载中…</span></span>
+      <button id="refreshBtn" class="btn">刷新</button>
+      <button id="historyBtn" class="btn btn--ghost">历史文件</button>
+    </div>
+  </header>
+
+  <section class="summary" id="summaryCards">
+    <div class="card"><div class="card-label">总 token</div><div class="card-num" id="sumTokens">–</div></div>
+    <div class="card"><div class="card-label">调用次数</div><div class="card-num" id="sumCalls">–</div></div>
+    <div class="card"><div class="card-label">5h 额度已用</div><div class="card-num" id="sum5h">–</div></div>
+    <div class="card"><div class="card-label">周额度已用</div><div class="card-num" id="sumWeek">–</div></div>
+  </section>
+
+  <section class="chart-block">
+    <h2 class="block-title">各模型成本占比</h2>
+    <canvas id="shareChart" width="860" height="220"></canvas>
+  </section>
+
+  <section class="table-block">
+    <h2 class="block-title">按模型明细（点击表头排序）</h2>
+    <div class="table-wrap">
+      <table id="modelTable">
+        <thead>
+          <tr>
+            <th data-key="model">模型</th>
+            <th data-key="calls" class="num">调用</th>
+            <th data-key="prompt" class="num">prompt</th>
+            <th data-key="completion" class="num">completion</th>
+            <th data-key="tokens" class="num">总 token</th>
+            <th data-key="weight" class="num">Level权重</th>
+            <th data-key="relativeCost" class="num">相对成本</th>
+            <th data-key="relativeRatio" class="num">占比</th>
+            <th data-key="shareFiveHour" class="num">5h分摊</th>
+            <th data-key="shareWeekly" class="num">周分摊</th>
+          </tr>
+        </thead>
+        <tbody id="modelRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span id="footNote">成本口径：实际 token × Ollama Usage Level 权重；5h/周分摊 = 额度 Δ × 该模型 token 占比。NewAPI 价格不作参考。</span>
+  </footer>
+
+  <script src="detail.js"></script>
+</body>
+</html>

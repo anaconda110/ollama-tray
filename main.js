@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
 const { fetchQuota, setSecureKey, getApiKey, initStore } = require('./lib/quota');
+const newapi = require('./lib/newapi');
+const { computeCost } = require('./lib/cost');
 
 const store = new Store({
   name: 'ollama-tray-config',
@@ -35,10 +37,37 @@ const store = new Store({
       type: 'number',
       default: 0,
     },
+    /** NewAPI 凭证 + 地址（可选，用于获取按模型消耗明细） */
+    newapiBaseUrl: { type: 'string', default: '' },
+    newapiUsername: { type: 'string', default: '' },
+    newapiPassword: { type: 'string', default: '' },
+    /** 上次 Ollama usage 采样（用于计算 5h/周额度变化与成本分摊） */
+    lastQuotaSnapshot: { type: 'object', default: {} },
   },
 });
 
 initStore(store, safeStorage);
+
+// ─── NewAPI 密码安全存取（同 API Key：safeStorage 加密）────────────────
+function setNewapiPassword(raw) {
+  if (!raw || !safeStorage || !safeStorage.isEncryptionAvailable()) {
+    store.set('newapiPassword', raw || '');
+    return;
+  }
+  store.set('newapiPassword', safeStorage.encryptString(raw).toString('base64'));
+}
+function getNewapiPassword() {
+  const raw = store.get('newapiPassword') || '';
+  if (!raw) return '';
+  if (!safeStorage || !safeStorage.isEncryptionAvailable()) return raw;
+  try { return safeStorage.decryptString(Buffer.from(raw, 'base64')); } catch { return ''; }
+}
+const newapiConfig = () => ({
+  baseUrl: store.get('newapiBaseUrl') || '',
+  username: store.get('newapiUsername') || '',
+  password: getNewapiPassword(),
+  hasCreds: !!(store.get('newapiBaseUrl') && store.get('newapiUsername') && getNewapiPassword()),
+});
 
 let tray = null;
 let popupWindow = null;
@@ -62,16 +91,11 @@ const OLLAMA_KEYS_URL = 'https://ollama.com/settings/keys';
 const FIVE_H = 5 * 60 * 60 * 1000;
 const BEIJING_OFFSET = 8 * 60 * 60 * 1000; // UTC+8
 let lastWeeklyPct = null;
+let lastSessionPct = null;
 
-/** 下一个 5h 重置点：基于北京时间整点网格（每 5h 一个整点）。倒计时恒 <= 5h。 */
-function nextFiveHGridReset(nowMs = Date.now()) {
-  const bj = nowMs + BEIJING_OFFSET; // 北京时间
-  const d = new Date(bj);
-  const bjDayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); // 北京当天 00:00
-  let ref = bjDayStart;
-  while (ref <= bj) ref += FIVE_H; // 推进到 now 之后最近的整点网格点
-  return ref - BEIJING_OFFSET; // 转回真实 UTC
-}
+// 5h 会话锚点：滚动窗口，相位随活动期不同。用持久化锚点 +5h 推进，保持相位。
+// 校准种子：最近实测重置 = 北京 18:00（2026-08-25 18:00 = 2026-08-25 10:00 UTC）。
+const SESSION_ANCHOR_SEED = Date.UTC(2026, 7, 25, 10, 0, 0); // 月 0-based：7=8 月
 
 function nextMondayUtcReset(nowMs = Date.now()) {
   const d = new Date(nowMs);
@@ -85,10 +109,20 @@ function nextMondayUtcReset(nowMs = Date.now()) {
 
 function applyFixedResetAnchor(quota) {
   const now = Date.now();
+  const sPct = quota.five_hour.used_pct;
   const wPct = quota.weekly.used_pct;
 
-  // 5h：确定性整点网格，倒计时恒 <= 5h
-  const sAnchor = nextFiveHGridReset(now);
+  // 5h：持久化整点锚点 +5h 滚动，保持相位；usage 大幅下降（>50%）= 窗口重置，沿用旧相位 +5h
+  let sAnchor = store.get('sessionAnchorMs');
+  const sessionReset = lastSessionPct !== null && sPct < lastSessionPct * 0.5;
+  if (!sAnchor || sAnchor <= now || sessionReset) {
+    let base = sAnchor && (now - sAnchor) <= 7 * 24 * 3_600_000 ? sAnchor : SESSION_ANCHOR_SEED;
+    let ref = base;
+    while (ref <= now) ref += FIVE_H;
+    sAnchor = ref;
+    store.set('sessionAnchorMs', sAnchor);
+  }
+  lastSessionPct = sPct;
 
   // 周额度：固定周一 00:00 UTC；窗口重置或锚点已过期时重新锚定
   let wAnchor = store.get('weeklyAnchorMs');
@@ -140,6 +174,7 @@ const I18N = {
     tooltip: 'Ollama · 用量',
     refresh: '立即刷新',
     history: '打开历史数据',
+    detail: '消耗明细（成本）',
     settings: '设置 API Key…',
     about: '关于',
     quit: '退出',
@@ -158,6 +193,7 @@ const I18N = {
     tooltip: 'Ollama · Usage',
     refresh: 'Refresh Now',
     history: 'Open history',
+    detail: 'Cost Detail',
     settings: 'Set API Key…',
     about: 'About',
     quit: 'Quit',
@@ -211,6 +247,7 @@ function createTray() {
     { label: t('refresh'), click: () => refreshQuota(true) },
     { type: 'separator' },
     { label: t('history'), click: () => openHistory() },
+    { label: t('detail'), click: () => openDetail() },
     { type: 'separator' },
     { label: t('settings'), click: () => openSettings() },
     {
@@ -292,9 +329,9 @@ function hidePopup() {
 function openSettings() {
   if (settingsWindow) { settingsWindow.focus(); return; }
   settingsWindow = new BrowserWindow({
-    width: 480,
-    height: 420,
-    resizable: false,
+    width: 520,
+    height: 640,
+    resizable: true,
     minimizable: false,
     maximizable: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true },
@@ -325,6 +362,82 @@ function openAbout() {
   aboutWindow.loadFile(path.join(__dirname, 'renderer', 'about.html'));
 }
 
+// ─── 消耗明细（独立详情窗口 + 历史落盘）─────────────────────
+const DETAIL_HISTORY_FILE = () => path.join(app.getPath('userData'), 'cost-detail-history.jsonl');
+let detailWindow = null;
+
+// 把 NewAPI 明细 + 成本分摊写入历史（JSONL，供详情页趋势图用）
+function appendDetailHistory(cost, logs, usageSnapshot) {
+  try {
+    const rec = {
+      ts: Date.now(),
+      iso: new Date().toISOString(),
+      summary: cost.total,
+      usage: {
+        fiveHour: usageSnapshot.five_hour.used_pct,
+        weekly: usageSnapshot.weekly.used_pct,
+      },
+      models: cost.models.map((m) => ({
+        model: m.model, calls: m.calls, tokens: m.tokens, weight: m.weight,
+        relativeRatio: m.relativeRatio, shareFiveHour: m.shareFiveHour, shareWeekly: m.shareWeekly,
+      })),
+    };
+    fs.appendFileSync(DETAIL_HISTORY_FILE(), JSON.stringify(rec) + '\n', 'utf8');
+  } catch (e) { log(`appendDetailHistory failed: ${e}`); }
+}
+
+// 聚合 NewAPI 明细 + 成本（供详情页与落盘共用）
+async function collectCostDetail() {
+  const cfg = newapiConfig();
+  if (!cfg.hasCreds) throw new Error('NO_NEWAPI');
+  newapi.setEndpoint(cfg.baseUrl);
+  await newapi.login(cfg.username, cfg.password);
+  const logs = await newapi.fetchCallLogs({ pageSize: 200, maxPages: 10 });
+  const agg = newapi.aggregateByModel(logs);
+  // 当前窗口消耗（含锚点 reset_at，用于跨重置 wrap-around）+ 上次采样
+  const usageNow = {
+    five_hour: currentQuota?.five_hour,
+    weekly: currentQuota?.weekly,
+  };
+  const usagePrev = store.get('lastQuotaSnapshot');
+  const cost = computeCost(agg, usageNow, usagePrev);
+  return { cost, logs, agg };
+}
+
+async function refreshDetail(force) {
+  try {
+    const d = await collectCostDetail();
+    if (!d) return { ok: false, code: 'NO_CONFIG' };
+    appendDetailHistory(d.cost, d.logs, currentQuota);
+    if (detailWindow && !detailWindow.isDestroyed()) {
+      detailWindow.webContents.send('detail-update', d.cost, d.logs);
+    }
+    return { ok: true, cost: d.cost };
+  } catch (e) {
+    log(`detail refresh failed: ${e && e.message || e}`);
+    return { ok: false, code: (e && e.message) || 'FAILED' };
+  }
+}
+
+function openDetail() {
+  if (detailWindow) { detailWindow.show(); detailWindow.focus(); void refreshDetail(true); return; }
+  detailWindow = new BrowserWindow({
+    width: 900,
+    height: 640,
+    resizable: true,
+    minimizable: true,
+    maximizable: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true },
+    icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'ollama-icon.png')),
+  });
+  detailWindow.loadFile(path.join(__dirname, 'renderer', 'detail.html'));
+  detailWindow.once('ready-to-show', () => {
+    detailWindow.show();
+    void refreshDetail(true);
+  });
+  detailWindow.on('closed', () => { detailWindow = null; });
+}
+
 // ─── 刷新配额 ──────────────────────────────────────────
 async function refreshQuota(force) {
   if (isRefreshing) return; // 并发守卫：避免定时器 + 手动刷新同时抓取
@@ -341,6 +454,12 @@ async function refreshQuota(force) {
     failCount = 0;
     nextRetryAt = 0;
     applyFixedResetAnchor(currentQuota);
+    // 记录 usage 快照（供成本 Δ 计算）；带 ts
+    store.set('lastQuotaSnapshot', {
+      five_hour: currentQuota.five_hour,
+      weekly: currentQuota.weekly,
+      ts: Date.now(),
+    });
     updateTrayIcon(currentQuota);
     appendHistory(currentQuota);
     if (popupWindow && isPopupVisible) {
@@ -389,6 +508,29 @@ ipcMain.handle('settings:openKeysPage', async () => {
 });
 ipcMain.handle('app:getLang', () => getLang());
 
+// ─── NewAPI 凭证 + 消耗明细 IPC ───────────────────────────
+ipcMain.handle('newapi:saveConfig', async (_e, { baseUrl, username, password }) => {
+  store.set('newapiBaseUrl', String(baseUrl || '').trim());
+  store.set('newapiUsername', String(username || '').trim());
+  setNewapiPassword(String(password || ''));
+  return { ok: true, config: newapiConfig() };
+});
+ipcMain.handle('newapi:clearConfig', async () => {
+  store.set('newapiBaseUrl', '');
+  store.set('newapiUsername', '');
+  store.set('newapiPassword', '');
+  return { ok: true, config: newapiConfig() };
+});
+ipcMain.handle('newapi:config', async () => ({ config: newapiConfig() }));
+ipcMain.handle('detail:refresh', async () => refreshDetail(true));
+ipcMain.handle('detail:open', async () => { openDetail(); return { ok: true }; });
+ipcMain.handle('detail:openHistory', async () => {
+  const f = DETAIL_HISTORY_FILE();
+  if (!fs.existsSync(f)) fs.writeFileSync(f, '', 'utf8');
+  shell.openPath(f);
+  return { ok: true };
+});
+
 // ─── 生命周期 ──────────────────────────────────────────
 // 单实例锁：避免重复打开多个托盘图标
 const gotLock = app.requestSingleInstanceLock();
@@ -404,6 +546,11 @@ if (!gotLock) {
     refreshQuota();
     const interval = Math.max(10, store.get('refreshInterval') || 60) * 1000;
     refreshTimer = setInterval(refreshQuota, interval);
+    // 消耗明细后台定时抓取（若配置了 NewAPI）：独立慢速周期（5 分钟）
+    setInterval(() => {
+      const cfg = newapiConfig();
+      if (cfg.hasCreds) void refreshDetail(false);
+    }, 5 * 60 * 1000);
   });
 }
 
