@@ -1,8 +1,22 @@
 # Ollama Cloud 配额重置规律（实测分析）
 
-> 日期：2026-08-21
-> 数据来源：用户连续多日观测 + `api.ollama.com/api/usage` 实测
+> 日期：2026-08-21（2026-10-07 更新：官方 API 改版后以 `resets_at` 为准）
+> 数据来源：用户连续多日观测 + `api.ollama.com/api/usage` / `api.ollama.com/api/balance` 实测
 > 结论：**5h 会话额度为「整点滚动窗口」，周额度为「每周一 00:00 UTC 固定重置」**
+
+---
+
+## 〇、2026-10-07 API 改版的接口变化
+
+| 项 | 旧（2026-10-07 前） | 新（2026-10-07 起） |
+|----|--------------------|-------------------|
+| 配额百分比 | `GET /api/usage` → `limits.session/weekly.usage`（0..1 已用） | `GET /api/balance` → `included.session/weekly.remaining_percent`（0..100 **剩余**），credit 计划为 `balance_usd/allowance_usd` |
+| 重置时间 | 不返回，本地锚点推算 | **`resets_at` 权威返回**（session / weekly 各自） |
+| cost / 周期类型 | `activity.cost` / `activity.period.type` | 无（credit 计划 `/api/usage?range=24h` 的 `totals.usage_usd` 近似） |
+| `/api/usage` | 配额 + 模型请求数 | 仅按天请求量序列（`totals.request_count` / `buckets`），`range=24h\|7d\|30d` |
+
+代码适配：`lib/quota.js` 的 `normalizeBalance`（新主路径）/ `normalizeQuota`（旧结构兜底）；
+`main.js` 的 `applyFixedResetAnchor` 在检测到 `resetSource === 'api'` 时直接采用 `resets_at`。
 
 ---
 
@@ -86,13 +100,13 @@ function nextMondayUtcReset(nowMs = Date.now()) {
 
 ## 四、实现要点（main.js `applyFixedResetAnchor`）
 
-- 锚点持久化到 electron-store（`sessionAnchorMs` / `weeklyAnchorMs`）
-- 窗口重置靠 `usage` 大幅下降（>50%）检测
+- 优先采用 API 返回的 `resets_at`（`resetSource === 'api'`），锚点不再用于此场景
+- 无 `resets_at` 时回退：锚点持久化到 electron-store（`sessionAnchorMs` / `weeklyAnchorMs`）
+- 窗口重置靠 `usage` 大幅下降（>50%）检测（仅兜底路径）
 - 5h 用「旧锚点+5h」保持整点；weekly 用 `nextMondayUtcReset()` 固定周一
-- API 不返回重置时间戳，故需锚点推算
 
 ## 五、参考
 
-- `lib/quota.js`：`normalizeQuota`
+- `lib/quota.js`：`normalizeBalance`（新）/ `normalizeQuota`（旧结构兜底）
 - `main.js`：`applyFixedResetAnchor` + `nextMondayUtcReset`
 - `renderer/popup.js`：`startTick()` 每秒按 `reset_at` 递减显示

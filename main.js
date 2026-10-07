@@ -112,22 +112,36 @@ function applyFixedResetAnchor(quota) {
   const sPct = quota.five_hour.used_pct;
   const wPct = quota.weekly.used_pct;
 
+  // 2026-10-07 起 /api/balance 直接返回权威 resets_at：有则优先采用，不再自行推算锚点
+  const sApiReset = quota.five_hour.resetSource === 'api' && quota.five_hour.reset_at
+    ? new Date(quota.five_hour.reset_at).getTime() : 0;
+  const wApiReset = quota.weekly.resetSource === 'api' && quota.weekly.reset_at
+    ? new Date(quota.weekly.reset_at).getTime() : 0;
+
   // 5h：持久化整点锚点 +5h 滚动，保持相位；usage 大幅下降（>50%）= 窗口重置，沿用旧相位 +5h
   let sAnchor = store.get('sessionAnchorMs');
   const sessionReset = lastSessionPct !== null && sPct < lastSessionPct * 0.5;
-  if (!sAnchor || sAnchor <= now || sessionReset) {
-    let base = sAnchor && (now - sAnchor) <= 7 * 24 * 3_600_000 ? sAnchor : SESSION_ANCHOR_SEED;
-    let ref = base;
-    while (ref <= now) ref += FIVE_H;
-    sAnchor = ref;
+  if (sApiReset > 0) {
+    sAnchor = sApiReset;
     store.set('sessionAnchorMs', sAnchor);
+  } else {
+    if (!sAnchor || sAnchor <= now || sessionReset) {
+      let base = sAnchor && (now - sAnchor) <= 7 * 24 * 3_600_000 ? sAnchor : SESSION_ANCHOR_SEED;
+      let ref = base;
+      while (ref <= now) ref += FIVE_H;
+      sAnchor = ref;
+      store.set('sessionAnchorMs', sAnchor);
+    }
   }
   lastSessionPct = sPct;
 
   // 周额度：固定周一 00:00 UTC；窗口重置或锚点已过期时重新锚定
   let wAnchor = store.get('weeklyAnchorMs');
   const weeklyReset = lastWeeklyPct !== null && wPct < lastWeeklyPct * 0.5;
-  if (!wAnchor || wAnchor <= now || weeklyReset) {
+  if (wApiReset > 0) {
+    wAnchor = wApiReset;
+    store.set('weeklyAnchorMs', wAnchor);
+  } else if (!wAnchor || wAnchor <= now || weeklyReset) {
     wAnchor = nextMondayUtcReset();
     store.set('weeklyAnchorMs', wAnchor);
   }
@@ -155,6 +169,10 @@ function appendHistory(quota) {
       weekly_usage: quota.weekly.used_pct,
       cost: quota.cost ?? null,
       period: quota.periodType ?? null,
+      // 数据来源与模式（balance=新 /api/balance；usage=旧结构兜底；credit=USD 余额制）
+      source: quota.source ?? null,
+      mode: quota.mode ?? null,
+      requests24h: quota.requests24h ?? null,
     };
     fs.appendFileSync(HISTORY_FILE(), JSON.stringify(rec) + '\n', 'utf8');
   } catch (e) {

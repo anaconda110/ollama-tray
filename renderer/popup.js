@@ -25,6 +25,10 @@ const I18N = {
     resetNow: '已可重置',
     minuteAgo: '分钟前更新',
     needKey: '请设置 API Key',
+    req24h: '24h 请求',
+    balance: '余额',
+    monthlyLabel: '本期',
+    resetOn: '重置',
   },
   en: {
     title: 'Ollama',
@@ -46,6 +50,10 @@ const I18N = {
     resetNow: 'Reset now',
     minuteAgo: 'Updated {m} min ago',
     needKey: 'Please set an API key',
+    req24h: '24h requests',
+    balance: 'Balance',
+    monthlyLabel: 'Period',
+    resetOn: 'Resets',
   },
 };
 
@@ -113,24 +121,65 @@ function render(d, lang) {
   quotaData = d;
   if (lang) setLang(lang);
 
-  animateNumber($('heroNum'), d.five_hour.used_pct);
-  const plan = (d.plan || '').trim();
-  $('planLabel').textContent = plan;
-  $('planLabel').style.display = plan ? '' : 'none';
-  $('heroLabel').textContent = plan ? I18N[currentLang].heroLabel : I18N[currentLang].heroLabelPlanless;
+  // credit 计划（USD 余额制）：无 5h/周窗口，改展示「本期已用 + USD 余额」
+  const credit = d.mode === 'credit' && !!d.monthly;
+  if (credit) {
+    const used = d.monthly.used_pct;
+    const bal = d.monthly.balance_usd;
+    const allow = d.monthly.allowance_usd;
+    animateNumber($('heroNum'), used);
+    $('planLabel').textContent = '';
+    $('planLabel').style.display = 'none';
+    $('heroLabel').textContent = I18N[currentLang].monthlyLabel;
 
-  $('pct5h').textContent = d.five_hour.used_pct + '%';
-  $('fill5h').style.width = d.five_hour.used_pct + '%';
-  $('pctWeek').textContent = d.weekly.used_pct + '%';
-  $('fillWeek').style.width = d.weekly.used_pct + '%';
-  $('pctWeek').classList.toggle('warn', d.weekly.used_pct >= 70);
+    $('label5h').textContent = I18N[currentLang].monthlyLabel;
+    $('pct5h').textContent = used + '%';
+    $('fill5h').style.width = used + '%';
+    $('reset5h').textContent = d.monthly.reset_at
+      ? `${I18N[currentLang].resetOn} ${fmtResetDate(d.monthly.reset_at)}` : '--';
+    $('reset5hSuffix').textContent = '';
+
+    $('labelWeekly').textContent = I18N[currentLang].balance;
+    $('pctWeek').textContent = bal != null && allow != null ? `$${bal.toFixed(2)} / $${allow.toFixed(2)}`
+      : bal != null ? `$${bal.toFixed(2)}` : '';
+    $('pctWeek').classList.remove('warn');
+    $('fillWeek').style.width = allow > 0 && bal != null
+      ? Math.min(100, Math.max(0, Math.round((bal / allow) * 100))) + '%' : '0%';
+    $('resetWeek').parentElement.style.visibility = 'hidden';
+  } else {
+    const plan = (d.plan || '').trim();
+    animateNumber($('heroNum'), d.five_hour.used_pct);
+    $('planLabel').textContent = plan;
+    $('planLabel').style.display = plan ? '' : 'none';
+    $('heroLabel').textContent = plan ? I18N[currentLang].heroLabel : I18N[currentLang].heroLabelPlanless;
+
+    $('label5h').textContent = I18N[currentLang].label5h;
+    $('pct5h').textContent = d.five_hour.used_pct + '%';
+    $('fill5h').style.width = d.five_hour.used_pct + '%';
+    $('reset5hSuffix').textContent = I18N[currentLang].resetSuffix;
+
+    $('labelWeekly').textContent = I18N[currentLang].labelWeekly;
+    $('pctWeek').textContent = d.weekly.used_pct + '%';
+    $('fillWeek').style.width = d.weekly.used_pct + '%';
+    $('pctWeek').classList.toggle('warn', d.weekly.used_pct >= 70);
+    $('resetWeek').parentElement.style.visibility = '';
+  }
 
   setStatus(d.weekly.used_pct, d.status);
+
+  const req = typeof d.requests24h === 'number' ? d.requests24h : null;
+  $('req24h').textContent = req != null ? `${I18N[currentLang].req24h} ${req}` : '';
 
   const time = new Date(d.updated_at).toLocaleTimeString(currentLang === 'zh' ? 'zh-CN' : 'en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
   $('updatedText').textContent = `${I18N[currentLang].updated} · ${time}`;
 
   startTick();
+}
+
+// 权威重置时间格式（credit 模式展示日期）
+function fmtResetDate(iso) {
+  if (!iso) return '--';
+  return new Date(iso).toLocaleString(currentLang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 // ─── 渲染错误 ──────────────────────────────────────────
@@ -140,6 +189,11 @@ function renderError(code, lang) {
   $('planLabel').textContent = '';
   $('planLabel').style.display = 'none';
   $('heroLabel').textContent = I18N[currentLang].heroLabelPlanless;
+  // 还原标准标签（上一次成功渲染可能处于 credit 模式，改写过文案）
+  $('label5h').textContent = I18N[currentLang].label5h;
+  $('labelWeekly').textContent = I18N[currentLang].labelWeekly;
+  $('reset5hSuffix').textContent = I18N[currentLang].resetSuffix;
+  $('resetWeek').parentElement.style.visibility = '';
   if (code === 'NO_KEY') $('updatedText').textContent = I18N[currentLang].needKey;
   else if (code === 'KEY_INVALID') $('updatedText').textContent = I18N[currentLang].statusExpired;
   else $('updatedText').textContent = I18N[currentLang].statusFailed;
@@ -148,6 +202,8 @@ function renderError(code, lang) {
 // ─── 倒计时每秒刷新 ────────────────────────────────────
 function startTick() {
   clearInterval(tickInterval);
+  // credit 模式显示的是绝对日期（非实时倒计时），无需每秒刷新
+  if (quotaData && quotaData.mode === 'credit') return;
   tickInterval = setInterval(() => {
     if (!quotaData) return;
     $('reset5h').textContent = fmtRemain(new Date(quotaData.five_hour.reset_at) - Date.now());

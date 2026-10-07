@@ -8,6 +8,23 @@
 - 配额告警通知（weekly >=70%/90% 时 Windows 通知）
 - 每周 Top 模型展示
 
+## [1.1.0] - 2026-10-07
+
+### 修复
+- **适配 Ollama Cloud 2026-10-07 API 改版**：旧 `/api/usage` 的 `limits.session/weekly` + `activity.cost` 已移除（同路径改为按天请求量序列），配额改从新端点 **`/api/balance`** 读取（legacy 计划 `included.session/weekly.remaining_percent` + 权威 `resets_at`；credit 计划 `balance_usd/allowance_usd/period.until`）。
+- 重置时间优先采用 API 返回的 `resets_at`（权威值），本地整点/周一锚点推算降级为无 `resets_at` 时的兜底。
+- 无法识别的响应结构现在**显式报错**（不再静默归一化成 0/null——此前该行为让改版故障表现为"面板全 0 且日志无错误"）。
+- 多 key 候选降级：本机加密存储 / Maka vault / 环境变量按优先级去重，某个来源 401 时自动尝试下一个。
+- credit 计划（USD 余额制）适配：popup 改显「本期已用% + 余额 $x / $y」，无 5h/周倒计时。
+- popup 页脚新增 24h 请求量（来自 `/api/usage?range=24h`，拉取失败不影响主流程）。
+
+### 新增
+- `/api/balance` 与 `/api/usage` 新契约的单元测试（legacy / credit / 边界 / 未知结构）。
+- `quota-history.jsonl` 记录新增 `source` / `mode` / `requests24h` 字段（向后兼容，旧字段不变）。
+
+### 变更
+- `appId` 修正为 `com.anaconda110.ollama-tray`。
+
 ## [1.0.0] - 2026-08-21
 
 ### 新增
@@ -31,5 +48,6 @@
 ### 安全
 - API Key 仅本机 safeStorage 加密存储，不落盘明文、不上传。
 
-[Unreleased]: https://github.com/anaconda110/ollama-tray/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/anaconda110/ollama-tray/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/anaconda110/ollama-tray/releases/tag/v1.1.0
 [1.0.0]: https://github.com/anaconda110/ollama-tray/releases/tag/v1.0.0

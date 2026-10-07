@@ -1,6 +1,6 @@
 {
   "name": "ollama-tray",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Open-source cross-platform system tray monitor for Ollama Cloud usage quota",
   "main": "main.js",
@@ -55,7 +55,7 @@
     "electron-store": "^8.2.0"
   },
   "build": {
-    "appId": "com.you.ollama-tray",
+    "appId": "com.anaconda110.ollama-tray",
     "productName": "Ollama Tray",
     "copyright": "Copyright © 2026 Ollama Tray Contributors",
     "directories": {

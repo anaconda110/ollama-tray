@@ -68,5 +68,7 @@ body {
 .bar-reset span { color: #2a1f1f; font-weight: 600; }
 
 /* ─── 底部 ─── */
-.card-foot { margin-top: auto; text-align: center; flex-shrink: 0; }
+.card-foot { margin-top: auto; text-align: center; flex-shrink: 0; display: flex; gap: 8px; justify-content: center; align-items: baseline; }
 .updated { color: #b8b0b0; font-size: 12px; font-weight: 400; }
+.req { color: #b8b0b0; font-size: 12px; font-weight: 400; }
+.req:empty { display: none; }

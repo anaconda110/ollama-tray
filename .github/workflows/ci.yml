@@ -21,8 +21,12 @@ jobs:
           node --check main.js
           node --check preload.js
           node --check lib/quota.js
+          node --check lib/cost.js
+          node --check lib/newapi.js
           node --check renderer/popup.js
           node --check renderer/settings.js
+          node --check renderer/detail.js
+          node --check scripts/analyze-history.js
       - name: Run unit tests
         run: npm test
 
