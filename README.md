@@ -26,8 +26,14 @@
 npm install
 npm start            # 启动
 npm test             # 单测
+npm run shot         # popup UI 冒烟截图（可选）
 npm run build:win    # 打包 Windows
 ```
+
+## 已知环境问题
+
+- **杀软 TLS 拦截**（如 Kaspersky）：Node 原生 fetch 会对 `api.ollama.com` 间歇性抛 `SELF_SIGNED_CERT_IN_CHAIN`，本应用主进程已改用 Electron `net.fetch` 规避（无需额外配置）；用纯 Node 脚本直连该 API 时仍可能遇到。
+- **`NODE_EXTRA_CA_CERTS` 指向已删除文件**时，每次启动打印 `Warning: Ignoring extra certs from ...`，无害但可通过清理该用户环境变量消除。
 
 ## 数据来源
 

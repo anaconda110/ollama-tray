@@ -8,6 +8,16 @@
 - 配额告警通知（weekly >=70%/90% 时 Windows 通知）
 - 每周 Top 模型展示
 
+## [1.1.1] - 2026-10-07
+
+### 修复
+- **刷新间歇性 `fetch failed`**：主进程改用 Electron `net.fetch`（Chromium 网络栈）。本机杀软（Kaspersky）对 `api.ollama.com` 做 TLS 拦截时，Node 原生 fetch（undici）会抛 `SELF_SIGNED_CERT_IN_CHAIN`，表现为随机刷新失败、`requests24h` 时有时无；`net.fetch` 走系统信任链，同机实测 10/10 成功、部署后连续运行零失败。
+- 请求增加 15s 超时，避免单端点挂起拖死整轮刷新。
+- `/api/usage` 请求量改为 best-effort：超时/限流只记 `null`，不再影响主数据（此前它失败会连带整轮刷新报错）。
+
+### 新增
+- `npm run shot`：popup UI 离屏冒烟工具（`scripts/popup-shot.js`），三种模式（session-weekly / credit / error）渲染截图并 dump 可见文本，便于改样式后快速自检。
+
 ## [1.1.0] - 2026-10-07
 
 ### 修复
@@ -48,6 +58,7 @@
 ### 安全
 - API Key 仅本机 safeStorage 加密存储，不落盘明文、不上传。
 
-[Unreleased]: https://github.com/anaconda110/ollama-tray/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/anaconda110/ollama-tray/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/anaconda110/ollama-tray/releases/tag/v1.1.1
 [1.1.0]: https://github.com/anaconda110/ollama-tray/releases/tag/v1.1.0
 [1.0.0]: https://github.com/anaconda110/ollama-tray/releases/tag/v1.0.0

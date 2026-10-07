@@ -1,10 +1,15 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, safeStorage, shell, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
-const { fetchQuota, setSecureKey, getApiKey, initStore } = require('./lib/quota');
+const { fetchQuota, setSecureKey, getApiKey, initStore, setFetchImpl } = require('./lib/quota');
 const newapi = require('./lib/newapi');
 const { computeCost } = require('./lib/cost');
+
+// 用 Chromium 网络栈替换 Node 全局 fetch：本机 Kaspersky TLS 拦截会让 Node 的 undici
+// fetch 对 api.ollama.com 间歇性抛 SELF_SIGNED_CERT_IN_CHAIN；net.fetch 走系统信任链，
+// 实测同机 10/10 成功。绑到全局以避免各处传递。在 app ready 之前调用也可用。
+setFetchImpl((...args) => net.fetch(...args));
 
 const store = new Store({
   name: 'ollama-tray-config',

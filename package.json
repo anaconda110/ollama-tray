@@ -1,6 +1,6 @@
 {
   "name": "ollama-tray",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Open-source cross-platform system tray monitor for Ollama Cloud usage quota",
   "main": "main.js",
@@ -35,7 +35,8 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
     "postinstall": "electron-builder install-app-deps",
-    "test": "node test/quota.test.js"
+    "test": "node test/quota.test.js",
+    "shot": "electron scripts/popup-shot.js"
   },
   "keywords": [
     "ollama",

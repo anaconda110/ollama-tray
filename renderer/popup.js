@@ -28,6 +28,8 @@ const I18N = {
     req24h: '24h 请求',
     balance: '余额',
     monthlyLabel: '本期',
+    monthlyUsed: '本期已用',
+    remainLabel: '剩余',
     resetOn: '重置',
   },
   en: {
@@ -53,6 +55,8 @@ const I18N = {
     req24h: '24h requests',
     balance: 'Balance',
     monthlyLabel: 'Period',
+    monthlyUsed: 'Period used',
+    remainLabel: 'Remaining',
     resetOn: 'Resets',
   },
 };
@@ -130,16 +134,16 @@ function render(d, lang) {
     animateNumber($('heroNum'), used);
     $('planLabel').textContent = '';
     $('planLabel').style.display = 'none';
-    $('heroLabel').textContent = I18N[currentLang].monthlyLabel;
+    $('heroLabel').textContent = I18N[currentLang].monthlyUsed;
 
-    $('label5h').textContent = I18N[currentLang].monthlyLabel;
+    $('label5h').textContent = I18N[currentLang].monthlyUsed;
     $('pct5h').textContent = used + '%';
     $('fill5h').style.width = used + '%';
     $('reset5h').textContent = d.monthly.reset_at
       ? `${I18N[currentLang].resetOn} ${fmtResetDate(d.monthly.reset_at)}` : '--';
     $('reset5hSuffix').textContent = '';
 
-    $('labelWeekly').textContent = I18N[currentLang].balance;
+    $('labelWeekly').textContent = I18N[currentLang].remainLabel;
     $('pctWeek').textContent = bal != null && allow != null ? `$${bal.toFixed(2)} / $${allow.toFixed(2)}`
       : bal != null ? `$${bal.toFixed(2)}` : '';
     $('pctWeek').classList.remove('warn');
