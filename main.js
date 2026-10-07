@@ -383,6 +383,12 @@ function openAbout() {
     icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'ollama-icon.png')),
   });
   aboutWindow.loadFile(path.join(__dirname, 'renderer', 'about.html'));
+  // 版本号取自 package.json，避免 HTML 里硬编码过时
+  aboutWindow.webContents.on('did-finish-load', () => {
+    aboutWindow.webContents
+      .executeJavaScript(`document.querySelector('.ver').textContent = 'v${app.getVersion()}'`)
+      .catch(() => {});
+  });
 }
 
 // ─── 消耗明细（独立详情窗口 + 历史落盘）─────────────────────
