@@ -30,10 +30,10 @@
   ],
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
+    "build": "electron-builder --publish never",
+    "build:win": "electron-builder --win --publish never",
+    "build:mac": "electron-builder --mac --publish never",
+    "build:linux": "electron-builder --linux --publish never",
     "postinstall": "electron-builder install-app-deps",
     "test": "node test/quota.test.js",
     "shot": "electron scripts/popup-shot.js"

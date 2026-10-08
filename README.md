@@ -27,8 +27,26 @@ npm install
 npm start            # 启动
 npm test             # 单测
 npm run shot         # popup UI 冒烟截图（可选）
-npm run build:win    # 打包 Windows
+npm run build:win    # 打包 Windows（默认不发布）
 ```
+
+## 发布
+
+产物名带空格（`Ollama Tray Setup 1.1.1.exe`），而 `latest.yml` 引用的是连字符名
+（`Ollama-Tray-Setup-1.1.1.exe`）——自动更新器按后者取文件。手动上传 Release 资产时，
+**必须把文件名里的空格换成连字符**，否则 `latest.yml` 会指向一个不存在的文件。
+`gh release create` 会自动做这个替换，用它上传最省事：
+
+```bash
+npm run build:win
+gh release create v1.1.1 \
+  "dist/Ollama Tray Setup 1.1.1.exe" \
+  "dist/Ollama Tray 1.1.1.exe" \
+  "dist/Ollama Tray Setup 1.1.1.exe.blockmap" \
+  "dist/latest.yml"
+```
+
+CI 只构建并上传 artifact，不发布（`--publish never`）；发布由维护者手动执行。
 
 ## 已知环境问题
 
